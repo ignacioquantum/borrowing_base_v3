@@ -1,0 +1,117 @@
+default_stages: [ commit ]
+fail_fast: false
+
+repos:
+
+  # General checks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+        files: (^|/)a/.+\.(py|sh)$
+      - id: debug-statements
+      - id: check-merge-conflict
+      - id: check-ast
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=45000']
+      - id: no-commit-to-branch
+        args: [ '--branch', 'master' ]
+
+  # Deprecation warning checks for python & django.
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.25.0
+    hooks:
+      - id: pyupgrade
+        args: [ --py38-plus ]
+
+  # Import checks, reorders, removes & makes imports absolute.
+
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.0
+    hooks:
+      - id: absolufy-imports
+
+  - repo: https://github.com/hadialqattan/pycln
+    rev: v2.1.2
+    hooks:
+      - id: pycln
+        exclude: c_profiler_runner.py
+        args: [ --all ]
+
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  # Checks for good code quality and practices.
+
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v1.5.7
+    hooks:
+      - id: autopep8
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        name: flake8-complexity
+        args: [--max-line-length=125]
+        additional_dependencies:
+          - flake8-simplify
+          - flake8-comprehensions
+          - flake8-too-many
+          - flake8-annotations-complexity
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        name: flake8-naming
+        args: [--max-line-length=125]
+        additional_dependencies:
+          - flake8-variables-names
+          - pep8-naming
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+        name: flake8-extras
+        args: [--max-line-length=125]
+        additional_dependencies:
+          - flake8-use-fstring
+          - flake8-bugbear
+          - flake8-tidy-imports
+
+  # Format and check for missing documentation.
+
+  - repo: https://github.com/myint/docformatter
+    rev: v1.3.1
+    hooks:
+      - id: docformatter
+        args: [ --in-place ]
+
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.4.0
+    hooks:
+      - id: interrogate
+        args: [ --fail-under=85, --ignore-init-method, --ignore-init-module, -v, --ignore-module ]
+
+  # External services or scripts not made in python.
+
+  - repo: https://github.com/IamTheFij/docker-pre-commit
+    rev: v2.0.1
+    hooks:
+      - id: docker-compose-check
+
+  # Hooks only applied on commit message stage. Helps linting commit message & django migrations.
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v2.18.0
+    hooks:
+      - id: commitizen
+        stages: [ commit-msg ]

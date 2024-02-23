@@ -1,0 +1,24 @@
+{
+  "StartAt": "template_process",
+  "States": {
+    "template_process": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "etl_job",
+          "States": {
+            "etl_job": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "etl_job"
+              }
+            },
+              "End": true
+            }
+          }
+      ]
+    }
+  }
+}

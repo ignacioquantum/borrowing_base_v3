@@ -1,0 +1,15 @@
+.terraform/
+.idea/
+.ipynb_checkpoints/
+final_data_v1.csv/
+.terraform*
+*.tfstate
+*.backup
+.DS_Store
+volume/
+*.ipynb
+.coverage
+*__pycache__/
+*parquets_tests/
+.tox
+*.csv*

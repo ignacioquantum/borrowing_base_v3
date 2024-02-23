@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "cloudwatch:PutMetricData"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogStream",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:CreateLogGroup"
+        ],
+        "Resource": "arn:aws:logs:*:*:log-group:*:*"
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "glue:StartJobRun",
+          "glue:GetJobRun",
+          "glue:GetJobRuns",
+          "glue:BatchStopJobRun"
+      ],
+        "Resource": [
+          "arn:aws:glue:us-east-1:dev_account:job/etl_job"
+        ]
+      }
+    ]
+  }

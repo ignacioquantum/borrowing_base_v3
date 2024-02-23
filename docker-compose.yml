@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  jupyter:
+    container_name: borrowing_base_glue_container
+    command: /home/glue_user/jupyter/jupyter_start.sh
+    environment:
+      - DISABLE_SSL=true
+    image: amazon/aws-glue-libs:glue_libs_3.0.0_image_01
+    ports:
+      - '4040:4040'
+      - '18080:18080'
+      - '8998:8998'
+      - '8888:8888'
+      - '22:22'
+    volumes:
+      - /Users/ignaciodiaz/mysql-connector-j-8.3.0/mysql-connector-j-8.3.0.jar:/home/mysql-connector-j-8.3.0.jar
+      - ${PWD}:/home/glue_user/workspace/jupyter_workspace/borrowing_base_v3/

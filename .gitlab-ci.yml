@@ -1,0 +1,82 @@
+stages:
+  - lint
+  - validate-code
+  - push
+
+terraform_lint:
+  stage: lint
+  image:
+    name: hashicorp/terraform:light
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  except:
+    - main
+  script:
+    - cd terraform
+    - terraform init -backend=false
+    - terraform validate
+    - terraform fmt -check=true
+  only:
+    - merge_requests
+
+run_src_tox:
+  image: amazonlinux:2.0.20190228
+  stage: validate-code
+  except:
+    - main
+  script:
+    - amazon-linux-extras enable python3.8
+    - yum install python38 java-1.8.0-openjdk -y
+    - export JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.312.b07-1.amzn2.0.2.x86_64/jre"
+    - export PYSPARK_PYTHON=python3.8
+    - curl -O https://bootstrap.pypa.io/get-pip.py
+    - python3.8 get-pip.py --user && rm get-pip.py
+    - /root/.local/bin/pip3 install 'tox==4.0.3'
+    - tox
+  only:
+    - merge_requests
+
+codecommit:update:
+  stage: push
+  image:
+    name: python:3.8-bullseye
+    entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  before_script:
+    - apt update -q && apt install -y -q git
+    - pip install awscli
+    - export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_DEV}
+    - export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_DEV}
+    - export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION_DEV}
+    - git config --global credential.helper '!aws codecommit credential-helper $@'
+    - git config --global credential.UseHttpPath true
+    - git remote add ${CI_JOB_ID} ${CODECOMMIT_URL_DEV}
+  script:
+    - git push -u ${CI_JOB_ID} HEAD:refs/heads/${CI_COMMIT_REF_NAME}
+  only:
+    refs:
+      - dev
+
+codecommit:update_prod:
+  stage: push
+  image:
+    name: python:3.8-bullseye
+    entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  before_script:
+    - apt update -q && apt install -y -q git
+    - pip install awscli
+    - export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_PRD}
+    - export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_PRD}
+    - export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION_PRD}
+    - git config --global credential.helper '!aws codecommit credential-helper $@'
+    - git config --global credential.UseHttpPath true
+    - git remote add ${CI_JOB_ID} ${CODECOMMIT_URL_PRD}
+  script:
+    - git push -u ${CI_JOB_ID} HEAD:refs/heads/${CI_COMMIT_REF_NAME}
+  only:
+    refs:
+      - main

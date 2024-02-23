@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement" : [
+      {
+        "Action" : "ses:SendEmail",
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "glue.amazonaws.com"
+        },
+        "Resource" : "arn:aws:ses:us-east-1:prod_account:identity/quantum_prod@outlook.com"
+      }
+    ]
+}
