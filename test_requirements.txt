@@ -14,7 +14,6 @@ boto3
 botocore
 pytz
 pyarrow
-pandas
 watchtower
 openpyxl
 pre-commit
