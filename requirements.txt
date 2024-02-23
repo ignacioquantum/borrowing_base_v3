@@ -5,3 +5,5 @@ pytz
 openpyxl
 pandas==1.2.4
 terraform-local
+sshtunnel
+paramiko

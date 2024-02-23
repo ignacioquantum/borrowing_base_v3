@@ -20,3 +20,5 @@ openpyxl
 pre-commit
 redshift_connector
 pycodestyle
+sshtunnel
+paramiko
