@@ -1,7 +1,6 @@
-import paramiko
 from sshtunnel import SSHTunnelForwarder
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import col, expr, round as spark_round, when, sum as spark_sum, concat_ws, lit, upper, datediff, current_timestamp
+from pyspark.sql.functions import col, expr, round as spark_round, when, sum as spark_sum, concat_ws, lit, upper
 
 from src.glue.borrowing_base_v3.config import ENV_VAR, BORROWING_TABLES
 
@@ -13,6 +12,25 @@ class BorrowingBaseV3:
         self.config_arg = config_arg
 
     def get_subquery_p(self, work_dfs: dict) -> DataFrame:
+        """
+            This function performs a series of transformations on the provided DataFrames
+            to generate a subset of data P that will be used later in the analysis.
+
+            Parameters:
+            - work_dfs (dict): A dictionary containing tables DataFrames needed to
+              perform the transformations. Keys are descriptive names and values are
+              the corresponding DataFrames.
+
+            Returns:
+            - DataFrame: A DataFrame resulting from the execution of the transformations.
+
+            Transformations performed:
+            1. Joining multiple DataFrames to obtain the necessary data.
+            2. Selecting and grouping specific columns.
+            3. Calculation of conditional sums.
+            4. Renaming of columns.
+            """
+
         p_subquery = work_dfs['leaseparameters'].join(
             work_dfs['totalleasecf'],
             col("`t.idLease`") == col("`l.idLeaseParameters`")
@@ -29,8 +47,7 @@ class BorrowingBaseV3:
             work_dfs['invoice'],
             (col("`i.cashflow_id`") == col("`t.idTotalLeaseCF`")) &
             (col("`i.lease_id`") == col("`l.idLeaseParameters`")) &
-            (col("`i.status_id`").isin([1, 3, 4]))
-            ,
+            (col("`i.status_id`").isin([1, 3, 4])),
             'left'
         )
 
@@ -42,8 +59,7 @@ class BorrowingBaseV3:
                                                   lit(self.config_arg['year']),
                                                   lit(self.config_arg['month']),
                                                   lit(self.config_arg['day'])
-                                                  ))
-            ,
+                                                  )),
             'left'
         )
 
@@ -95,6 +111,21 @@ class BorrowingBaseV3:
         return p_subquery
 
     def get_subquery_sub1x(self, p_subquery: DataFrame) -> DataFrame:
+        """
+            This function takes a DataFrame 'p_subquery' as input and performs additional transformations
+            to calculate the due amounts for various payment components based on the given conditions.
+
+            Parameters:
+            - p_subquery (DataFrame): The DataFrame resulting from a previous transformation.
+
+            Returns:
+            - DataFrame: A DataFrame containing calculated due amounts for payment components.
+
+            Transformations performed:
+            1. Calculation of due amounts for 'IPMT', 'PPMT', 'VAT', and 'RV' based on certain conditions.
+            2. Grouping of data by 'idLeaseParameters', 'Currency', and 'FX'.
+            3. Aggregation of due amounts for 'PPMT', 'VAT', 'RV', and total demand principal.
+            """
 
         sub1x = p_subquery.alias('p').select(
             'p.*',
@@ -131,6 +162,22 @@ class BorrowingBaseV3:
         return sub1x
 
     def get_subquery_dm(self, work_dfs: dict) -> DataFrame:
+        """
+           This function generates a subquery DataFrame 'dm_subquery' by joining 'totalleasecf' and 'vat' DataFrames,
+           and calculates demand principal amounts based on specific conditions.
+
+           Parameters:
+           - work_dfs (dict): A dictionary containing relevant DataFrames required for the calculations.
+
+           Returns:
+           - DataFrame: A DataFrame containing calculated demand principal amounts.
+
+           Transformations performed:
+           1. Joining 'totalleasecf' and 'vat' DataFrames on specific columns.
+           2. Filtering rows based on certain conditions.
+           3. Grouping data by 'idLease' column.
+           4. Aggregating demand principal amounts including VAT and excluding VAT.
+           """
 
         dm_subquery = work_dfs['totalleasecf'].join(
             work_dfs['vat'],
@@ -158,6 +205,24 @@ class BorrowingBaseV3:
         return dm_subquery
 
     def get_final_df(self, work_dfs: dict, dm_subquery: DataFrame, sub1x_subquery: DataFrame) -> DataFrame:
+        """
+            This function generates a final DataFrame by joining multiple DataFrames and performing transformations
+            to compute various financial metrics related to leases.
+
+            Parameters:
+            - work_dfs (dict): A dictionary containing relevant DataFrames required for the calculations.
+            - dm_subquery (DataFrame): A DataFrame containing demand principal amounts.
+            - sub1x_subquery (DataFrame): A DataFrame containing due amounts for payment components.
+
+            Returns:
+            - DataFrame: A DataFrame containing computed financial metrics for leases.
+
+            Transformations performed:
+            1. Joining 'leaseparameters', 'keymetrics', 'dm_subquery', and 'sub1x_subquery' DataFrames.
+            2. Selecting and renaming columns to represent financial metrics accurately.
+            3. Applying currency conversions and rounding off numerical values.
+            4. Filtering rows based on specific conditions related to lease status and closing dates.
+        """
 
         final_query = work_dfs['leaseparameters'].join(
             work_dfs['keymetrics'],
@@ -222,15 +287,24 @@ class BorrowingBaseV3:
         return final_query
 
     def main(self) -> None:
+        """
+            This method serves as the entry point for executing the borrowing base calculation process.
+            It establishes an SSH tunnel connection to the database server, retrieves necessary data from
+            various tables, performs data transformations, computes financial metrics, and writes the
+            results to a CSV file.
+
+            Returns:
+            - None
+        """
 
         configs: dict = ENV_VAR[self.config_arg['ENV']]
         connection_properties: dict = configs['conection_properties']
 
         with SSHTunnelForwarder((connection_properties['ssh_host'], connection_properties['ssh_port']),
-                    ssh_username = connection_properties['ssh_port'],
-                    ssh_password = connection_properties['ssh_password'],
-                    remote_bind_address = (connection_properties['remote_host'], connection_properties['db_port']),
-                    local_bind_address=('localhost', connection_properties['db_port'])) as tunnel:
+                                ssh_username=connection_properties['ssh_port'],
+                                ssh_password=connection_properties['ssh_password'],
+                                remote_bind_address=(connection_properties['remote_host'], connection_properties['db_port']),
+                                local_bind_address=('localhost', connection_properties['db_port'])):
 
             work_dfs: dict = {}
             borrowing_tables = BORROWING_TABLES
@@ -252,11 +326,3 @@ class BorrowingBaseV3:
             final_query = self.get_final_df(work_dfs, dm_subquery, sub1x_subquery)
 
             final_query.repartition(1).write.csv('result_borrowing_base.csv', header=True, mode='overwrite')
-
-
-
-
-
-
-
-

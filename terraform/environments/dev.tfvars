@@ -1,47 +1,30 @@
 region                   = "us-east-1"
-project_name             = "template"
+project_name             = "quantum_reports-borrow_base"
 environment              = "dev"
 bucket_utility           = "dev-bucket"
-bucket_origin            = "dev-origin"
-topic_sns_name           = "notifications"
-redshift_connection_name = "redshift"
 
 jobs_config = {
-  etl_job = {
-    job_name              = "etl_job",
+  quantum_reports-borrow_base_job = {
+    job_name              = "quantum_reports-borrow_base_job",
     glue_version          = "4.0",
-    log_group             = "/aws-glue/jobs/etl_job",
+    log_group             = "/aws-glue/jobs/quantum_reports-borrow_base_job",
     log_retention         = 300,
-    role_name             = "etl_job_glue_role",
+    role_name             = "quantum_reports-borrow_base_job_glue_role",
     role_file             = "roles/glue_role.json",
-    policy_name           = "etl_job_glue_policy",
+    policy_name           = "quantum_reports-borrow_base_job_glue_policy",
     policy_file           = "policies/dev/glue_policy.json",
     instance_type         = "G.1X",
     num_workers           = 10,
     max_concurrent_runs   = 1,
-    script_location       = "s3://bucket_utility/template/src/glue/etl/driver.py",
-    extra_py_files        = "s3://bucket_utility/template/src.zip"
+    script_location       = "s3://bucket_utility/borrow_base/src/glue/borrow_base_v3/driver.py",
+    extra_py_files        = "s3://bucket_utility/borrow_base/src.zip"
     environment_variables = {
       "--ENV": "dev",
-      "--LOG_GROUP_NAME": "/aws-glue/jobs/template",
-      "--LOG_APP_NAME": "/aws-glue/jobs/template",
-      "--ARN_ROLE_REDSHIFT": "arn:aws:iam::account:role",
+      "--LOG_GROUP_NAME": "/aws-glue/jobs/borrow_base_v3",
+      "--LOG_APP_NAME": "/aws-glue/jobs/borrow_base_v3",
       "--additional-python-modules": "redshift-connector, watchtower, openpyxl",
       "--secret_name": "secret"
     }
-  }
-}
-
-step_functions_config = {
-  sf = {
-    template            = "step_functions/template.json",
-    log_group           = "step_function",
-    log_retention       = 300,
-    role_name           = "step_functions_role",
-    role_file           = "roles/step_functions_role.json",
-    policy_name         = "step_functions_policy",
-    policy_file         = "policies/dev/step_functions_policy.json",
-    schedule_expression = "cron(0 10 * * ? *)"
   }
 }
 
@@ -55,14 +38,5 @@ lambda_config = {
     bucket_trigger = "dev-origin",
     arn_bucket = "arn:aws:s3:::dev-origin",
     log_retention = 60
-  }
-}
-
-notifications_emails = ["dummy@quantumlease.com"]
-
-notifications_config ={
-  ses = {
-    email = "quantum_dev@outlook.com",
-    policy_file = "policies/dev/ses_policy.json"
   }
 }
