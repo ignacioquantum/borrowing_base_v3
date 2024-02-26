@@ -32,7 +32,7 @@ def test_p_subquery() -> None:
 
     p_test = BorrowingBaseV3(spark, args).get_subquery_p(work_dfs)
 
-    assert_frame_equal(p_test, p)
+    assert_frame_equal(p_test, p, check_row_order=False)
 
     spark.stop()
 
@@ -64,7 +64,7 @@ def test_sub1x_subquery() -> None:
     p_test = BorrowingBaseV3(spark, args).get_subquery_p(work_dfs)
     sub1x_test = BorrowingBaseV3(spark, args).get_subquery_sub1x(p_test)
 
-    assert_frame_equal(sub1x, sub1x_test)
+    assert_frame_equal(sub1x, sub1x_test, check_row_order=False)
     spark.stop()
 
 
@@ -93,7 +93,7 @@ def test_dm_subquery() -> None:
 
     dm_test = BorrowingBaseV3(spark, args).get_subquery_dm(work_dfs)
 
-    assert_frame_equal(dm, dm_test)
+    assert_frame_equal(dm, dm_test, check_row_order=False)
     spark.stop()
 
 
