@@ -21,3 +21,4 @@ redshift_connector
 pycodestyle
 sshtunnel
 paramiko
+pyspark_assert
