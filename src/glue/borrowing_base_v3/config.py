@@ -7,6 +7,8 @@ ENV_VAR: dict = {
         "ssh_password": 'heJQAshymxMMhnKW6vth3LlEWbsc',
         "remote_host": 'quantum-v2-dev-rds.cluster-cegv0wkgdkwr.us-east-1.rds.amazonaws.com',
         "db_port": 3306,
+        "by_date_path": 'resources/datalake_poc/borrowing_base_by_date/',
+        "by_id_path": 'resources/datalake_poc/borrowing_base_by_ID',
         "conection_properties": {
             "user": "idiaz",
             "password": "FI1cYZAN2ICKr7Ads1RaNGgL8lnX",
