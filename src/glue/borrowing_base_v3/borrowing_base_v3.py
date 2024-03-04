@@ -204,7 +204,7 @@ class BorrowingBaseV3:
         )
         return dm_subquery
 
-    def get_final_df(self, work_dfs: dict, dm_subquery: DataFrame, sub1x_subquery: DataFrame) -> DataFrame:
+    def get_final_df(self, work_dfs: dict, dm_subquery: DataFrame, sub1x_subquery: DataFrame, configs: dict) -> DataFrame:
         """
             This function generates a final DataFrame by joining multiple DataFrames and performing transformations
             to compute various financial metrics related to leases.
@@ -237,32 +237,32 @@ class BorrowingBaseV3:
         )
 
         final_query = final_query.select(
-            col("`l.idLeaseParameters`").alias('Lease ID'),
+            col("`l.idLeaseParameters`").alias('Lease_ID'),
             col("`l.funder`").alias('Funder'),
-            upper(col("`l.LeaseName`")).alias("Lease Name"),
+            upper(col("`l.LeaseName`")).alias("Lease_Name"),
             col("`l.Product`").alias('Product'),
             col("`l.status`").alias('Status'),
             spark_round(when(col("`l.Currency`") == 'MXN',
                              col("`l.DRAW`") / col("`l.FX`")).otherwise(col("`l.DRAW`")), 2).alias('DRAW'),
             spark_round(when(col("`l.Currency`") == 'MXN',
-                             col("dmd_prin") / self.config_arg['fx']).otherwise(col("dmd_prin")), 2).alias('Borrowing base as of fx Date'),
+                             col("dmd_prin") / self.config_arg['fx']).otherwise(col("dmd_prin")), 2).alias('Borrowing_base_as_of_fx_Date'),
             when(col("`l.Currency`") == 'MXN',
                  spark_round(col("curr_dmd_prin") / self.config_arg['fx'], 2)).otherwise(spark_round(col("curr_dmd_prin"), 2)).alias(
-                'Borrowing base curr as of fx Date'),
+                'Borrowing_base_curr_as_of_fx_Date'),
             spark_round(when(col("`l.Currency`") == 'MXN',
                              col("dmd_prin") / col("`l.FX`")).otherwise(col("dmd_prin")), 2).alias(
-                'Borrowing base as of Closing FX'),
+                'Borrowing_base_as_of_Closing_FX'),
             when(col("`l.Currency`") == 'MXN',
                  spark_round(col("curr_dmd_prin") / col("`l.FX`"), 2)).otherwise(
-                spark_round(col("curr_dmd_prin"), 2)).alias('Borrowing base curr as of Closing FX'),
+                spark_round(col("curr_dmd_prin"), 2)).alias('Borrowing_base_curr_as_of_Closing_FX'),
             upper(col("`l.Currency`")).alias('Currency'),
-            when(col("`l.Currency`") == 'USD', 0).otherwise(col("`l.FX`")).alias('Closing FX'),
+            when(col("`l.Currency`") == 'USD', 0).otherwise(col("`l.FX`")).alias('Closing_FX'),
             col("`l.Industry`").alias('Industry'),
-            col("`l.EquipmentType`").alias('Equipment Type'),
+            col("`l.EquipmentType`").alias('Equipment_Type'),
             col("`k.LTVFacilityDE`").alias('LTV'),
             col("`l.Coupon`").alias('Coupon'),
             col("`k.IRR`").alias('IRR'),
-            col("`l.FirstPaymentDate`").alias('First Payment Date'),
+            col("`l.FirstPaymentDate`").alias('First_Payment_Date'),
             col("`l.Duration`").alias('Term'),
             spark_round(expr(
                 "CASE WHEN months_between(current_timestamp(), `l.FirstPaymentDate`) < 0 "
@@ -272,17 +272,24 @@ class BorrowingBaseV3:
             CASE WHEN (`l.Duration` - months_between(current_timestamp(), `l.FirstPaymentDate`)) < 0 
             THEN 0 ELSE (`l.Duration` - months_between(current_timestamp(), `l.FirstPaymentDate`)) 
             END""")).alias("Life"),
-            col('`l.ClosingDate`').alias('Closing Date')
+            col('`l.ClosingDate`').alias('Closing_Date')
         ).where(
             (col('`k.deleted_at`').isNull()) &
-            (col('`l.status`').isin(['ACTIVE', 'BOOKED', 'CURRENT', 'TERMINATED'])) &
-            (~col('`l.status_detail`').isin(['RESTRUCTURED', 'SPECIAL CONDITIONS'])) &
+            (col('`l.status`').isin(self.config_arg['status'])) &
+            (~col('`l.status_detail`').isin(self.config_arg['status_detail_ignore'])) &
             (col('`l.ClosingDate`') >= '2017-12-31') &
-            (col('`l.ClosingDate`') <= '2023-11-30')
+            (col('`l.ClosingDate`') <= f"{self.config_arg['year']}-{self.config_arg['month']}-{self.config_arg['day']}")
 
         )
 
-        final_query.show()
+        final_query.repartition(1).write.csv(
+            f"{configs['by_date_path']}/{self.config_arg['year']}-{self.config_arg['month']}",
+            header=True,
+            mode='overwrite'
+        )
+
+        if self.config_arg['lease_id_list']:
+            final_query = final_query.select('*').where(col('Lease_ID').isin(self.config_arg['lease_id_list']))
 
         return final_query
 
@@ -300,11 +307,11 @@ class BorrowingBaseV3:
         configs: dict = ENV_VAR[self.config_arg['ENV']]
         connection_properties: dict = configs['conection_properties']
 
-        with SSHTunnelForwarder((connection_properties['ssh_host'], connection_properties['ssh_port']),
-                                ssh_username=connection_properties['ssh_port'],
-                                ssh_password=connection_properties['ssh_password'],
-                                remote_bind_address=(connection_properties['remote_host'], connection_properties['db_port']),
-                                local_bind_address=('localhost', connection_properties['db_port'])):
+        with ((SSHTunnelForwarder((connection_properties['ssh_host'], connection_properties['ssh_port']),
+                                  ssh_username=connection_properties['ssh_port'],
+                                  ssh_password=connection_properties['ssh_password'],
+                                  remote_bind_address=(connection_properties['remote_host'], connection_properties['db_port']),
+                                  local_bind_address=('localhost', connection_properties['db_port'])))):
 
             work_dfs: dict = {}
             borrowing_tables = BORROWING_TABLES
@@ -323,6 +330,9 @@ class BorrowingBaseV3:
 
             dm_subquery = self.get_subquery_dm(work_dfs)
 
-            final_query = self.get_final_df(work_dfs, dm_subquery, sub1x_subquery)
+            final_query = self.get_final_df(work_dfs, dm_subquery, sub1x_subquery, configs)
 
-            final_query.repartition(1).write.csv('result_borrowing_base.csv', header=True, mode='overwrite')
+            final_query.show()
+
+            final_query.write.mode('overwrite').partitionBy('Lease_ID', 'Closing_Date').format('parquet').save(
+                configs['by_id_path'])

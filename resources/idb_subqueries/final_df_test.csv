@@ -1,4 +1,4 @@
-Lease ID,Funder,Lease Name,Product,Status,DRAW,Borrowing base as of fx Date,Borrowing base curr as of fx Date,Borrowing base as of Closing FX,Borrowing base curr as of Closing FX,Currency,Closing FX,Industry,Equipment Type,LTV,Coupon,IRR,First Payment Date,Term,Season,Life,Closing Date
+Lease_ID,Funder,Lease_Name,Product,Status,DRAW,Borrowing_base_as_of_fx_Date,Borrowing_base_curr_as_of_fx_Date,Borrowing_base_as_of_Closing_FX,Borrowing_base_curr_as_of_Closing_FX,Currency,Closing_FX,Industry,Equipment_Type,LTV,Coupon,IRR,First_Payment_Date,Term,Season,Life,Closing_Date
 2,IJARAH,PYCAPSA 3,CREDIT,TERMINATED,186116.65,156914.83,36652.93,138178.86,32276.49,MXN,19.57,MANUFACTURE OF PACKAGING MATERIAL,PRINTING & PAPER BASED PACKAGING MATERIAL,0.84,0.2175,0,25/10/18,51,,,29/09/18
 18,IJARAH,OGT 5,OPERATING LEASE,TERMINATED,470567.29,470567.29,3595,470567.29,3595,USD,0,MANUFACTURE OF CONSTRUCTION MATERIAL,WOOD FORMING,0.83,0.1475,0.1544,25/03/19,48,,,29/01/19
 23,SQNC,VALLAS 4,OPERATING LEASE,TERMINATED,417926.71,460286.13,20073.29,417926.71,18225.97,MXN,18.98,"PROFESIONAL, SCIENTIFIC AND TECHNICAL SERVICES",TECHNOLOGY,0.862069,0.234,0.1935,05/08/18,36,,,31/05/18

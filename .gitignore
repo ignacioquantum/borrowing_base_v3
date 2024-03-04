@@ -13,3 +13,4 @@ volume/
 *parquets_tests/
 .tox
 *part*.csv*
+resources/datalake_poc/
